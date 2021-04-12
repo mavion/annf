@@ -1,79 +1,69 @@
 import "lib/github.com/diku-dk/cpprandom/random"
+import "lib/github.com/diku-dk/sorts/insertion_sort"
+
 
 module rng_engine = minstd_rand
 module rand_i64 = uniform_int_distribution i64 rng_engine
 
-let init_matches (fields: i64)
-                 (range: i64)
-                 : [fields]i64 =
+let dist2 [k] (a: [k]i64) (b: [k]i64) : i64 =
+    reduce (+) 0 (map2 (\x y -> (x-y)**2) a b)
+
+let init_matches [k] [n] [m]
+                 (wh_src: [k][n]i64) 
+                 (wh_trg: [k][m]i64)
+                 (knn: i64)
+                 : ([n][knn]i64, [n][knn]i64) =
     let rng = rng_engine.rng_from_seed [42]
-    let rngs = rng_engine.split_rng fields rng
-    let (_,rands) = unzip (map (rand_i64.rand (0, range-1)) rngs)
-    in rands
+    let rngs = rng_engine.split_rng (n*knn) rng
+    let (_,rands) = unzip (map (rand_i64.rand (0, m-1)) rngs)
+    let matches = unflatten n knn rands
+    let matchl2 = map2 (\x ys -> map (\y -> dist2 wh_src[:,x] wh_trg[:,y]) ys) (iota n) matches
+    in unzip (map2 (\xs ys -> unzip (insertion_sort_by_key (\(_,y) -> y) (<=) (zip xs ys))) matches matchl2)
 
-
-
-let neighbour_cand [n] [m] [o] [k]
-                    (matches: [n]i64)
-                    (hash_trg: [m]i64)
-                    (hash_table_trg: [o][k]i64)
-                    (offset: i64)
-                    : [n][]i64 =
-    let kplusone = k+1
-    in map (\i -> 
-            let step = if (((i+offset) < 0) || ((i+offset) >= n)) then 0
-                        else (i+offset)
-            let matchn = matches[step]
-            let match_step = if matchn-offset < 0 || matchn-offset >= m then 0
-                                else matchn-offset
-            in concat_to kplusone hash_table_trg[hash_trg[match_step],:] [match_step]
-        ) (iota n)
-    -- neighbours might be out of bounds. In the sequential approach these are ignored and don't add candidates to the propagation
-    -- here out of bounds are instead redirected in bounds and add (probably very poor) candidates to keep everything flat.
-    -- a different 'flat' approach could be using masks instead.
-
-let find_candidates [n] [m] [o] [k] 
-                    (matches: [n]i64)
+let find_candidates_all [n] [m] [o] [k] [knn] 
+                    (matches: [n][knn]i64)
                     (hash_src: [n]i64)
                     (hash_trg: [m]i64)
                     (hash_table_src: [o][k]i64)
                     (hash_table_trg: [o][k]i64)
-                    (dims: (i64,i64))
+                    (y_size_src: i64)
+                    (y_size_trg: i64)
                     : [n][]i64 =
-    -- type 1. check hash_src on table_trg
-    let cands = unflatten n (6*k+4) (replicate (n*(6*k+4)) 0)
-    let cands[:,0:k] = map (\i -> hash_table_trg[hash_src[i],:]) (iota n)
-    let amt = k
-    -- type 2. check neighbours->match->neighbour->hash_trg on table_trg
-    let (_,y) = dims
-    let cands[:,amt:amt+k+1] = neighbour_cand matches hash_trg hash_table_trg 1
-    let amt = amt+k+1
-    let cands[:,amt:amt+k+1] = neighbour_cand matches hash_trg hash_table_trg (-1)
-    let amt = amt+k+1
-    let cands[:,amt:amt+k+1] = neighbour_cand matches hash_trg hash_table_trg y
-    let amt = amt+k+1
-    let cands[:,amt:amt+k+1] = neighbour_cand matches hash_trg hash_table_trg (-y)
-    let amt = amt+k+1
-    -- type 3. check hash_src on table_src->matches
-    let cands[:,amt:amt+k] = map (\i -> map (\j -> matches[j]) hash_table_src[hash_src[i],:]) (iota n)
-    in cands
+    let cand_count = k+4*knn + 4*knn*k +k*knn
+    let find_candidates i = -- type 1. check hash_src on table_trg
+        let type1 = hash_table_trg[hash_src[i],:]
+        -- type 2. check neighbours->match->neighbour->hash_trg on table_trg
+        let neighbours = map (\step -> if i + step < 0 || i + step >= n then 0 else i + step) [1, (-1), y_size_src, (-y_size_src)]
+        let match_ngbr = map (\j -> matches[j,:]) neighbours
+        -- neighbours matches' neighbour are candidates
+        let type2ngbr = flatten (map2 (\js step -> map (\j ->
+                                    if j + step < 0 || j + step >= m then 0 else j + step) js
+                                ) match_ngbr [(-1), 1, (-y_size_trg), y_size_trg])
+        -- these candidates hash lookups are also candidates
+        let type2hash = flatten (map (\j -> hash_table_trg[hash_trg[j],:]) type2ngbr) 
+        -- type 3. check hash_src on table_src->matches
+        let type3 = flatten (map (\j -> matches[j,:]) hash_table_src[hash_src[i],:])
+        in type1 ++ type2ngbr ++ type2hash ++ type3 :> [cand_count]i64
+    in map (find_candidates) (iota n)
 
-let dist2 [k] (a: [k]i64) (b: [k]i64) : i64 =
-    reduce (+) 0 (map2 (\x y -> (x-y)**2) a b)
-
-let best_dist [n] [k] [m]
-             (prj_src: [k][n]i64)
-             (prj_trg: [k][m]i64)
-             (cands: [n][]i64) 
-             : [n](i64,i64) =
-    map (\i -> 
-        let l2s = map (\j -> dist2 prj_src[:,i] prj_trg[:,j]) cands[i,:]
-        in reduce (\(x0, x1) (y0, y1) -> 
-                    if x0 < y0 then (x0, x1) else (y0, y1)) (i64.highest,0) (zip l2s cands[i,:])
-        ) (iota n)
-
-let cmp_cand_match [n]
-                    (matc: [n](i64,i64)) -- match is reserved
-                    (cand: [n](i64,i64))
-                    :[n](i64,i64) =
-    map2 (\(x0, x1) (y0, y1) -> if x0 < x1 then (x0, x1) else (y0, y1)) matc cand
+let pick_best [knn] [n]
+            (matches: [knn]i64)
+            (match_dist: [knn]i64)
+            (candidates: [n]i64)
+            (candidate_dist: [n]i64)
+            : ([knn]i64, [knn]i64) =
+    loop (m_inds, m_d) = (copy matches, copy match_dist) for i < n do
+        if candidate_dist[i] >= m_d[knn-1] then (m_inds, m_d)
+        else 
+            let cur_dist = candidate_dist[i]
+            let cur_ind = candidates[i]
+            let (inds', il2s', _, _) =
+                loop (m_inds, m_d, cur_ind, cur_dist) for j < knn do
+                    if cur_dist >= m_d[j] 
+                    then (m_inds, m_d, cur_ind, cur_dist)
+                    else let cur_dist' = m_d[j]
+                         let cur_ind' = m_inds[j]
+                         let m_d[j] = cur_dist
+                         let m_inds[j] = cur_ind
+                         in (m_inds, m_d, cur_ind', cur_dist')
+            in (inds', il2s')

@@ -7,7 +7,8 @@ let cshANN [n] [m] [k] [j]
            (img_src : [3][n][m]i8) 
            (img_trg : [3][k][j]i8) 
            (iters: i64)
-           : []i64 =
+           (knn: i64)
+           : [][][knn][2]i64 =
     -- indexing --
     -- compute projections --
     let (dimx, dimy) = (n-7, m-7)
@@ -26,19 +27,19 @@ let cshANN [n] [m] [k] [j]
     let hash_table_trg = create_hash_table hash_trg (1<<(reduce (+) 0 bit_counts)) width
     -- searching --
     -- initialize matches --
-    let matches = init_matches patch_count patch_count2
-    let matchl2 = map2 (\x y -> dist2 wh_src[:,x] wh_trg[:,y]) (iota patch_count) matches
+    let (matches,matchl2) = init_matches wh_src wh_trg knn
     -- propapagation --
     let (matches,_) = 
         loop (matches, matchl2) = (matches, matchl2) for i < iters do
             -- find all 3 types of candidates
-            let candidates = find_candidates matches hash_src[i,:] hash_trg[i,:] hash_table_src[i,:] hash_table_trg[i,:] (dimx, dimy)
-            -- compute l2 dist(lower bound) for each candidate and find best candidate
-            let best_cand = best_dist wh_src wh_trg candidates
-            -- compare best candidate and match and return best of the two
-            let (matches', matchl2') = unzip (cmp_cand_match (zip matches matchl2) best_cand)
+            let candidates = find_candidates_all matches hash_src[i,:] hash_trg[i,:] hash_table_src[i,:] hash_table_trg[i,:] dimy dimy2
+            -- find l2 distance of all candidates
+            let candidatesl2 = map2 (\x ys -> map (\y -> dist2 wh_src[:,x] wh_trg[:,y]) ys) (iota patch_count) candidates
+            -- pick the knn best candidates from candidates and matches. These are the new matches
+            let (matches', matchl2') = unzip (map4 (pick_best) matches matchl2 candidates candidatesl2)
             in (matches', matchl2')
     -- convert from 1d coordinates to 2d
-    in matches
+    in unflatten dimx dimy (map (\xs -> map (\x -> [x % dimx, x / dimx]) xs) matches)
 
-let main img_a img_b = cshANN img_a img_b 5
+
+let main img_a img_b = cshANN img_a img_b 5 2

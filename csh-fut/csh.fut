@@ -4,8 +4,8 @@ import "propagate"
 
 -- Given two images in Y/Cr/Cb format return the annf. Hardcoded to 8x8 patch size for now
 let cshANN [n] [m] [k] [j]
-           (img_src : [3][n][m]i8) 
-           (img_trg : [3][k][j]i8) 
+           (img_src : [n][m][3]u8) 
+           (img_trg : [k][j][3]u8) 
            (iters: i64)
            (knn: i64)
            : [][][knn][2]i64 =
@@ -42,4 +42,4 @@ let cshANN [n] [m] [k] [j]
     in unflatten dimx dimy (map (\xs -> map (\x -> [x % dimx, x / dimx]) xs) matches)
 
 
-let main img_a img_b = cshANN img_a img_b 5 2
+let main img_a img_b iters knn = cshANN img_a img_b iters knn

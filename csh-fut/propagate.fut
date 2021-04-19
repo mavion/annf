@@ -5,8 +5,8 @@ import "lib/github.com/diku-dk/sorts/insertion_sort"
 module rng_engine = minstd_rand
 module rand_i64 = uniform_int_distribution i64 rng_engine
 
-let dist2 [k] (a: [k]i64) (b: [k]i64) : i64 =
-    reduce (+) 0 (map2 (\x y -> (x-y)**2) a b)
+let dist2 [k] (xs: [k]i64) (ys: [k]i64) : i64 =
+    reduce (+) 0 (map2 (\x y -> (x-y)*(x-y)) xs ys)
 
 let init_matches [k] [n] [m]
                  (wh_src: [k][n]i64) 

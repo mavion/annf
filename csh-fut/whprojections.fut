@@ -70,15 +70,15 @@ let patch_sum [n] [m]
 
 -- size is actually [23][n-7*m-7], but functions aren't a valid size types. 
 let wh_project [n] [m]
-             (img: [3][n][m]i64)
+             (img: [n][m][3]i64)
              : [23][]i64 =
     -- create the first gray code projection, which is just a 8x8 convolution of ones.
     -- padding with zeros is used to handle initialization of steps
     let prjs = replicate 23 (replicate (n) (replicate (m) 0))
     -- for each channel compute their simple wh projection. Can't be done efficiently
-    let prjs[0,:,:] = patch_sum img[0,:,:]
-    let prjs[15,:,:] = patch_sum img[1,:,:]
-    let prjs[19,:,:] = patch_sum img[2,:,:]
+    let prjs[0,:,:] = patch_sum img[:,:,0]
+    let prjs[15,:,:] = patch_sum img[:,:,1]
+    let prjs[19,:,:] = patch_sum img[:,:,2]
     -- set hardcoded values corresponding to the gray code steps taken
     -- main channel
     -- 0   <1  <2  <3  <4
@@ -110,6 +110,6 @@ let wh_project [n] [m]
     in unflatten 23 ((n-7)*(m-7))(flatten_3d prjs[:,7:,7:])
 
 let wh_project_8bit [n] [m]
-             (img: [3][n][m]i8)
+             (img: [n][m][3]u8)
              : [23][]i64 =
-    wh_project (map (map (map (i64.i8))) img)
+    wh_project (map (map (map (i64.u8))) img)

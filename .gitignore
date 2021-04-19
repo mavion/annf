@@ -1,0 +1,4 @@
+*pycache*
+*data
+*.out
+*.npy

@@ -2,7 +2,7 @@ import "lib/github.com/diku-dk/sobol/sobol-dir-50"
 import "lib/github.com/diku-dk/sobol/sobol"
 import "lib/github.com/diku-dk/sorts/radix_sort"
 import "lib/github.com/diku-dk/cpprandom/random"
-import "helper-functions"
+import "helper_functions"
 
 module s = Sobol sobol_dir { let D = 2i64 }
 module rng_engine = minstd_rand

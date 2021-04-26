@@ -42,10 +42,44 @@ let cshANN [n] [m] [k] [j]
             in (matches', matchl2')
     -- convert from 1d coordinates to 2d
     in unflatten dimx dimy (map (\xs -> map (\x -> [x / dimy, x % dimy]) xs) matches)
--- let pick_best_nn [n] [m] [k] [j] [knn] [r] [s]
---                 (img_src: [n][m][3]u8)
---                 (img_trg: [k][j][3]u8)
---                 (matches: [r][s][knn][2]i64)
---                 : [r][s][2]i64 =
+
+
+-- Given two images in RGB format(or similar, fx RBG) and the knn produced, return the nn.
+entry pick_best_nn [n] [m] [k] [j] [knn] [r] [s]
+                (img_src: [n][m][3]u8)
+                (img_trg: [k][j][3]u8)
+                (matches: [r][s][knn][2]i64)
+                : [r][s][2]i64 =
+    let patch_size = 8*8*3
+    in map2 (\x match_row ->  
+        map2 (\y match_point ->
+            let src_patch = map (i64.u8) (flatten_3d img_src[x:x+8,y:y+8,:]) :> [patch_size]i64
+            let dists = map (\xy -> dist2 src_patch (map (i64.u8) (flatten_3d img_trg[xy[0]:xy[0]+8,xy[1]:xy[1]+8,:]) :> [patch_size]i64)) match_point
+            let (_, best) = reduce (\(x0, x1) (y0, y1) -> if x0 < y0 then (x0,x1) else (y0,y1)) (i64.highest, [0,0]) (zip dists match_point)
+            in best
+        ) (iota s) match_row
+    ) (iota r) matches
+
+-- Given two images in RGB format(or similar, fx RBG) and the nn produced, return the RMS
+-- Why does the below give an allocation error when the above doesn't?
+-- entry RMS_error [n] [m] [k] [j] [r] [s]
+--                 (img_src: [n][m][3]i64)
+--                 (img_trg: [k][j][3]i64)
+--                 (matches: [r][s][2]i64)
+--                 : f32 =
+--     let patch_size = 8*8*3
+--     let l2s =  
+--         map2 (\x match_row ->  
+--             map2 (\y nn ->
+--                 let src_patch = flatten_3d img_src[x:x+8,y:y+8,:] :> [patch_size]i64
+--                 let trg_patch = flatten_3d img_trg[nn[0]:nn[0]+8,nn[1]:nn[1]+8,:] :> [patch_size]i64
+--                 in dist2 src_patch trg_patch
+--             ) (iota s) match_row
+--         ) (iota r) matches
+--     let l2s = map (f32.i64) (flatten l2s)
+--     let patch_count = f32.i64 (r*s)
+--     let l2s = map (/patch_count) l2s
+--     in (reduce (+) 0 l2s)**0.5
+
 
 let main img_a img_b iters knn = cshANN img_a img_b iters knn

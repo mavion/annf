@@ -18,7 +18,7 @@ let cshANN [n] [m] [k] [j]
     let patch_count2 = dimx2*dimy2
     let wh_trg = wh_project_8bit img_trg :> [23][patch_count2]i64
     -- create hashcodes --
-    let bit_counts = [5, 3, 3, 1, 1, 1, 2, 2] -- how many bits are allocated to specific kernels, unmentioned kernels are 0
+    let bit_counts = [5, 3, 3, 1, 1, 1, 2, 2] -- how many bits are allocated to specific kernels, unmentioned kernels are 0 and thus skipped
     let kernels_used = [0, 1, 5, 6, 2, 9, 15, 19] -- kernels used for creating hashcodes, implicit indexing used for the number of bits per kernel
     let (hash_src, hash_trg) = create_hash_codes (map (\i -> wh_src[i,:]) kernels_used) (map (\i -> wh_trg[i,:]) kernels_used) iters bit_counts
     -- create hashtables --
@@ -39,7 +39,7 @@ let cshANN [n] [m] [k] [j]
             let (matches', matchl2') = unzip (map4 (pick_best) matches matchl2 candidates candidatesl2)
             in (matches', matchl2')
     -- convert from 1d coordinates to 2d
-    in unflatten dimx dimy (map (\xs -> map (\x -> [x % dimx, x / dimx]) xs) matches)
+    in unflatten dimx dimy (map (\xs -> map (\x -> [x / dimy, x % dimy]) xs) matches)
 
 
 let main img_a img_b iters knn = cshANN img_a img_b iters knn

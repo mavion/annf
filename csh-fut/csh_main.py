@@ -16,16 +16,16 @@ def convert_image(img):
 # takes patch_size as int
 # returns error as the root mean square error
 def mean_error(matches, orig_img, trg_img, patch_size=patch_size_standard):
-    # err = c.RMS_error(orig_img, trg_img, matches).get()
-    # return err
+    err = c.RMS_error(orig_img, trg_img, matches)
+    return err
 
-    errs = np.zeros_like(matches[:,:,0])
-    x,y,z = orig_img.shape
-    xs, ys = matches[:,:,0], matches[:,:,1]
-    for i in np.arange(0,patch_size):
-        for j in np.arange(0,patch_size):
-            errs+= np.sum((orig_img[i:x+i-patch_size+1, j:y+j-patch_size+1,:]-trg_img[xs+i,ys+j,:])**2,axis=2) 
-    return np.mean(errs)**0.5
+    # errs = np.zeros_like(matches[:,:,0])
+    # x,y,z = orig_img.shape
+    # xs, ys = matches[:,:,0], matches[:,:,1]
+    # for i in np.arange(0,patch_size):
+    #     for j in np.arange(0,patch_size):
+    #         errs+= np.sum((orig_img[i:x+i-patch_size+1, j:y+j-patch_size+1,:]-trg_img[xs+i,ys+j,:])**2,axis=2) 
+    # return np.mean(errs)**0.5
 
 # takes matches as shape of (x,y,k,2)
 # takes original and target image as BGR format
@@ -63,7 +63,9 @@ def main(orig_img_path, trg_img_path, iters=5, knn=3, patch_size=patch_size_stan
         print("Original image shape: {}".format(img_a_conv.shape))
         print("Target image shape: {}".format(img_b_conv.shape))
     knn_patches = csh_knn(img_a_conv, img_b_conv, iters, knn)
-    img_a = img_a.astype(np.uint8)
-    img_b = img_b.astype(np.uint8)
-    best_matches = find_best_n(knn_patches, img_a, img_b)
+    img_a_u8 = img_a.astype(np.uint8)
+    img_b_u8 = img_b.astype(np.uint8)
+    best_matches = find_best_n(knn_patches, img_a_u8, img_b_u8)
+    img_a = img_a.astype(int)
+    img_b = img_b.astype(int)
     return mean_error(best_matches, img_a, img_b)

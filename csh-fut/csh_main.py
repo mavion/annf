@@ -14,7 +14,7 @@ def convert_image(img):
 # takes matches as shape of (x,y,2)
 # takes original and target image as BGR format
 # takes patch_size as int
-# returns error as the root mean square error
+# returns error as the average l2 distance
 def mean_error(matches, orig_img, trg_img, patch_size=patch_size_standard):
     err = c.RMS_error(orig_img, trg_img, matches)
     return err
@@ -25,7 +25,7 @@ def mean_error(matches, orig_img, trg_img, patch_size=patch_size_standard):
     # for i in np.arange(0,patch_size):
     #     for j in np.arange(0,patch_size):
     #         errs+= np.sum((orig_img[i:x+i-patch_size+1, j:y+j-patch_size+1,:]-trg_img[xs+i,ys+j,:])**2,axis=2) 
-    # return np.mean(errs)**0.5
+    # return np.mean(errs**0.5)
 
 # takes matches as shape of (x,y,k,2)
 # takes original and target image as BGR format

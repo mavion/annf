@@ -86,8 +86,8 @@ entry RMS_error [n] [m] [k] [j] [r] [s]
     --     ) (iota r) matches
     let l2s = map (f32.i64) (flatten l2s)
     let patch_count = f32.i64 (r*s)
-    let l2s = map (/patch_count) l2s
-    in (reduce (+) 0 l2s)**0.5
+    let l2s = map (\x -> (x**0.5)/patch_count) l2s
+    in (reduce (+) 0 l2s)
 
 
 let main img_a img_b iters knn = cshANN img_a img_b iters knn

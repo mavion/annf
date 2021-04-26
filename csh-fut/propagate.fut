@@ -46,24 +46,30 @@ let find_candidates_all [n] [m] [o] [k] [knn]
         in type1 ++ type2ngbr ++ type2hash ++ type3 :> [cand_count]i64
     in map (find_candidates) (iota n)
 
-let pick_best [knn] [n]
+let pick_best_ed [knn] [n] [m]
+            (wh_trg: [m][23]i64)
             (matches: [knn]i64)
             (match_dist: [knn]i64)
             (candidates: [n]i64)
-            (candidate_dist: [n]i64)
+            (wh_src: [23]i64)
             : ([knn]i64, [knn]i64) =
     loop (m_inds, m_d) = (copy matches, copy match_dist) for i < n do
-        if candidate_dist[i] >= m_d[knn-1] then (m_inds, m_d)
-        else 
-            let cur_dist = candidate_dist[i]
-            let cur_ind = candidates[i]
-            let (inds', il2s', _, _) =
-                loop (m_inds, m_d, cur_ind, cur_dist) for j < knn do
-                    if cur_dist >= m_d[j] 
-                    then (m_inds, m_d, cur_ind, cur_dist)
-                    else let cur_dist' = m_d[j]
-                         let cur_ind' = m_inds[j]
-                         let m_d[j] = cur_dist
-                         let m_inds[j] = cur_ind
-                         in (m_inds, m_d, cur_ind', cur_dist')
-            in (inds', il2s')
+        let (cand_dist, _) =
+            loop (acc, j) = (0, 0) while ((acc < m_d[knn-1]) && (j < 23)) do
+                let acc' = acc + (wh_trg[candidates[i],j] - wh_src[j]) * (wh_trg[candidates[i],j] - wh_src[j])
+                let j' = j+1
+                in (acc', j')
+        in  if cand_dist >= m_d[knn-1] then (m_inds, m_d)
+            else 
+                let cur_dist = cand_dist
+                let cur_ind = candidates[i]
+                let (inds', il2s', _, _) =
+                    loop (m_inds, m_d, cur_ind, cur_dist) for j < knn do
+                        if cur_dist >= m_d[j] 
+                        then (m_inds, m_d, cur_ind, cur_dist)
+                        else let cur_dist' = m_d[j]
+                            let cur_ind' = m_inds[j]
+                            let m_d[j] = cur_dist
+                            let m_inds[j] = cur_ind
+                            in (m_inds, m_d, cur_ind', cur_dist')
+                in (inds', il2s')

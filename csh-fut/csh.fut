@@ -35,10 +35,8 @@ let cshANN [n] [m] [k] [j]
         loop (matches, matchl2) = (matches, matchl2) for i < iters do
             -- find all 3 types of candidates
             let candidates = find_candidates_all matches hash_src[i,:] hash_trg[i,:] hash_table_src[i,:] hash_table_trg[i,:] dimy dimy2
-            -- find l2 distance of all candidates
-            let candidatesl2 = map2 (\x ys -> map (\y -> dist2 wh_src_trs[x,:] wh_trg_trs[y,:]) ys) (iota patch_count) candidates
-            -- pick the knn best candidates from candidates and matches. These are the new matches
-            let (matches', matchl2') = unzip (map4 (pick_best) matches matchl2 candidates candidatesl2)
+            -- Calculate the l2 distance incrementally as a lower bound. If the lower bound surpasses the worst of knn then perform an early dropout
+            let (matches', matchl2') = unzip (map4 (pick_best_ed wh_trg_trs) matches matchl2 candidates wh_src_trs)
             in (matches', matchl2')
     -- convert from 1d coordinates to 2d
     in unflatten dimx dimy (map (\xs -> map (\x -> [x / dimy, x % dimy]) xs) matches)

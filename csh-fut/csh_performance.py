@@ -9,8 +9,8 @@ limit = 5
 stepsize_k = 2
 stepsize_iterations = 2
 max_k = 6
-max_iterations = 10
-max_pairs = 5
+max_iterations = 6
+max_pairs = 1
 
 directory_path = sys.argv[1]
 entries = sorted(os.listdir(directory_path))

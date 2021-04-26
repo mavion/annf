@@ -27,6 +27,8 @@ let cshANN [n] [m] [k] [j]
     let hash_table_trg = create_hash_table hash_trg (1<<(reduce (+) 0 bit_counts)) width
     -- searching --
     -- initialize matches --
+    let wh_src_trs = transpose wh_src
+    let wh_trg_trs = transpose wh_trg
     let (matches,matchl2) = init_matches wh_src wh_trg knn
     -- propapagation --
     let (matches,_) = 
@@ -34,12 +36,16 @@ let cshANN [n] [m] [k] [j]
             -- find all 3 types of candidates
             let candidates = find_candidates_all matches hash_src[i,:] hash_trg[i,:] hash_table_src[i,:] hash_table_trg[i,:] dimy dimy2
             -- find l2 distance of all candidates
-            let candidatesl2 = map2 (\x ys -> map (\y -> dist2 wh_src[:,x] wh_trg[:,y]) ys) (iota patch_count) candidates
+            let candidatesl2 = map2 (\x ys -> map (\y -> dist2 wh_src_trs[x,:] wh_trg_trs[y,:]) ys) (iota patch_count) candidates
             -- pick the knn best candidates from candidates and matches. These are the new matches
             let (matches', matchl2') = unzip (map4 (pick_best) matches matchl2 candidates candidatesl2)
             in (matches', matchl2')
     -- convert from 1d coordinates to 2d
     in unflatten dimx dimy (map (\xs -> map (\x -> [x / dimy, x % dimy]) xs) matches)
-
+-- let pick_best_nn [n] [m] [k] [j] [knn] [r] [s]
+--                 (img_src: [n][m][3]u8)
+--                 (img_trg: [k][j][3]u8)
+--                 (matches: [r][s][knn][2]i64)
+--                 : [r][s][2]i64 =
 
 let main img_a img_b iters knn = cshANN img_a img_b iters knn

@@ -1,4 +1,5 @@
 import "helper-functions"
+import "csh_patchsize"
 
 -- The recurrence kernel_x[i] = kernel_y[i] o kernel_y[i-stride] o kernel_x[i-stride] is solved here
 -- o is plus or minus depending on how prior and current kernel is related
@@ -71,45 +72,37 @@ let patch_sum [n] [m]
 -- size is actually [23][n-7*m-7], but functions aren't a valid size types. 
 let wh_project [n] [m]
              (img: [n][m][3]i64)
-             : [23][]i64 =
+             (p_cons: p_constant [] [] [])
+             (k_c: i64)
+             : [k_c][]i64 =
     -- create the first gray code projection, which is just a 8x8 convolution of ones.
     -- padding with zeros is used to handle initialization of steps
-    let prjs = replicate 23 (replicate (n) (replicate (m) 0))
+
+    let prjs = replicate k_c (replicate (n) (replicate (m) 0))
     -- for each channel compute their simple wh projection. Can't be done efficiently
+    let main_size = (length p_cons.transpositions_Y) +1
+    let sary_size = (length p_cons.transpositions_C) +1
     let prjs[0,:,:] = patch_sum img[:,:,0]
-    let prjs[15,:,:] = patch_sum img[:,:,1]
-    let prjs[19,:,:] = patch_sum img[:,:,2]
+    let prjs[main_size,:,:] = patch_sum img[:,:,1]
+    let prjs[main_size+sary_size,:,:] = patch_sum img[:,:,2]
     -- set hardcoded values corresponding to the gray code steps taken
-    -- main channel
-    -- 0   <1  <2  <3  <4
-    -- ^5  <6  <7  <8
-    -- ^9  <10 <11
-    -- ^12 <13
-    -- ^14
-    -- gray code path(1d) is +++ -> ++- -> +-- -> +-+ -> --+
-    -- the arrow corresponds to the kernel that the numbered projection will be computed from. I.e. kernel 7 will be computed from kernel 6.
-    -- up arrow also requires transposition
-    -- let prior       = [ 0, 1, 2, 3, 0, 5, 6, 7, 5, 9,10, 9,12,12]
-    let need_transpose = [ false, false, false, false, true, false, false, false, true, false, false, true, false, true]
-    let strides        = [ 4, 2, 4, 1, 4, 4, 2, 4, 2, 4, 2, 4, 4, 1]
-    let signs          = [-1,-1, 1,-1,-1,-1,-1, 1,-1,-1,-1, 1,-1,-1]
-    let prjs[1:15,:,:] = gray_code_steps (copy prjs[0,:,:]) need_transpose strides signs
+    let need_transpose = p_cons.transpositions_Y
+    let strides        = p_cons.strides_Y
+    let signs          = p_cons.signs_Y
+    let prjs[1:main_size,:,:] = gray_code_steps (copy prjs[0,:,:]) need_transpose strides signs
     -- second
-    -- 15  <16
-    -- ^17 <18
-    -- let prior          = [15,15,17]
-    let need_transpose = [ false, true, false]
-    let strides        = [ 4, 4, 4]
-    let signs          = [-1,-1,-1]
-    let prjs[16:19,:,:] = gray_code_steps (copy prjs[15,:,:]) need_transpose strides signs
+    let need_transpose = p_cons.transpositions_C
+    let strides        = p_cons.strides_C
+    let signs          = p_cons.signs_C
+    let prjs[main_size+1:main_size+sary_size,:,:] = gray_code_steps (copy prjs[main_size,:,:]) need_transpose strides signs
     -- third
-    -- 19  <20
-    -- ^21 <22
-    -- let prior          = [19,19,21]
-    let prjs[20:23,:,:] = gray_code_steps (copy prjs[19,:,:]) need_transpose strides signs
-    in unflatten 23 ((n-7)*(m-7))(flatten_3d prjs[:,7:,7:])
+    let prjs[main_size+sary_size+1:k_c,:,:] = gray_code_steps (copy prjs[main_size+sary_size,:,:]) need_transpose strides signs
+    let p_sm = p_cons.patch_size - 1
+    in unflatten k_c ((n-p_sm)*(m-p_sm))(flatten_3d prjs[:,p_sm:,p_sm:])
 
 let wh_project_8bit [n] [m]
              (img: [n][m][3]u8)
-             : [23][]i64 =
-    wh_project (map (map (map (i64.u8))) img)
+             (p_c: p_constant [] [] [])
+             (k_c: i64) 
+             : [k_c][]i64 =
+    wh_project (map (map (map (i64.u8))) img) p_c k_c

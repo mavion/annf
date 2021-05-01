@@ -6,11 +6,11 @@ import numpy as np
 import csh_main
 
 debug=1
-limit = 5
+#limit = 5
 stepsize_k = 2
 stepsize_iterations = 2
-max_k = 8
-max_iterations = 10
+max_k = 2
+max_iterations = 2
 max_pairs = 1
 
 directory_path = sys.argv[1]
@@ -27,8 +27,8 @@ def run_pair(path1, path2):
     img_b_conv = csh_main.convert_image(img_b)
     img_a_u8 = img_a.astype(np.uint8)
     img_b_u8 = img_b.astype(np.uint8)
-    img_a = img_a.astype(int)
-    img_b = img_b.astype(int)
+    # img_a = img_a.astype(int)
+    # img_b = img_b.astype(int)
     time2 = time.perf_counter()
     result_file.write("{},{},{}\n".format(path1, path2, time2-time1))
     for j in range(1,max_k, stepsize_k):

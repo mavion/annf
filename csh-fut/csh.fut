@@ -1,6 +1,7 @@
 import "whprojections"
 import "hashing"
 import "propagate"
+import "csh_patchsize"
 
 -- Given two images in Y/Cr/Cb format return the annf. Hardcoded to 8x8 patch size for now
 let cshANN [n] [m] [k] [j]
@@ -8,18 +9,31 @@ let cshANN [n] [m] [k] [j]
            (img_trg : [k][j][3]u8) 
            (iters: i64)
            (knn: i64)
+           (p_size: i64)
            : [][][knn][2]i64 =
+    -- Patchsize has a unique set of constants connected to them. These are stored as records
+    let p_cons = get_constants p_size
+    -- Records contains lists with lengths that differ based on patch size
+    -- Being able to pick between multiple records means branches with different lengths, i.e. anonymous lengths
+    -- some fields share the same length
+    -- because of the aforementioned branching the compiler can't determine this.
+    -- here the record is reinstantiated with known lengths(as they can be determined from any one of the fields)
+    let ps_1 = length p_cons.signs_Y
+    let ps_2 = length p_cons.signs_C
+    let ps_3 = length p_cons.bit_counts
+    let p_cons = p_cons :> p_constant [ps_1] [ps_2] [ps_3]
     -- indexing --
     -- compute projections --
-    let (dimx, dimy) = (n-7, m-7)
+    let (dimx, dimy) = (n-p_size+1, m-p_size+1)
+    let (dimx2, dimy2) = (k-p_size+1, j-p_size+1)
     let patch_count = dimx*dimy
-    let wh_src = wh_project_8bit img_src :> [23][patch_count]i64
-    let (dimx2, dimy2) = (k-7, j-7)
     let patch_count2 = dimx2*dimy2
-    let wh_trg = wh_project_8bit img_trg :> [23][patch_count2]i64
+    let k_c = p_cons.kernel_count
+    let wh_src = wh_project_8bit img_src p_cons k_c :> [k_c][patch_count]i64
+    let wh_trg = wh_project_8bit img_trg p_cons k_c :> [k_c][patch_count2]i64
     -- create hashcodes --
-    let bit_counts = [5, 3, 3, 1, 1, 1, 2, 2] -- how many bits are allocated to specific kernels, unmentioned kernels are 0 and thus skipped
-    let kernels_used = [0, 1, 5, 6, 2, 9, 15, 19] -- kernels used for creating hashcodes, implicit indexing used for the number of bits per kernel
+    let bit_counts = p_cons.bit_counts -- how many bits are allocated to specific kernels, unmentioned kernels are 0 and thus skipped
+    let kernels_used = p_cons.kernels_used -- kernels used for creating hashcodes, implicit indexing used for the number of bits per kernel
     let (hash_src, hash_trg) = create_hash_codes (map (\i -> wh_src[i,:]) kernels_used) (map (\i -> wh_trg[i,:]) kernels_used) iters bit_counts
     -- create hashtables --
     let width = 2
@@ -45,6 +59,7 @@ let cshANN [n] [m] [k] [j]
 
 
 -- Given two images in RGB format(or similar, fx RBG) and the knn produced, return the nn.
+-- TODO patchsize
 entry pick_best_nn [n] [m] [k] [j] [knn] [r] [s]
                 (img_src: [n][m][3]u8)
                 (img_trg: [k][j][3]u8)
@@ -62,6 +77,7 @@ entry pick_best_nn [n] [m] [k] [j] [knn] [r] [s]
 
 -- Given two images in RGB format(or similar, fx RBG) and the nn produced, return the RMS
 -- Why does the below give an allocation error when the above doesn't?
+-- TODO patchsize
 entry RMS_error [n] [m] [k] [j] [r] [s]
                 (img_src: [n][m][3]u8)
                 (img_trg: [k][j][3]u8)
@@ -90,4 +106,4 @@ entry RMS_error [n] [m] [k] [j] [r] [s]
     in (reduce (+) 0 l2s)
 
 
-let main img_a img_b iters knn = cshANN img_a img_b iters knn
+let main img_a img_b iters knn = cshANN img_a img_b iters knn 8

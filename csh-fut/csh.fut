@@ -106,4 +106,4 @@ entry RMS_error [n] [m] [k] [j] [r] [s]
     in (reduce (+) 0 l2s)
 
 
-let main img_a img_b iters knn = cshANN img_a img_b iters knn 8
+let main img_a img_b iters knn = cshANN img_a img_b iters knn 16

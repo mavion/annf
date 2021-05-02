@@ -55,21 +55,21 @@ let gray_code_steps [n] [m] [o]
             let res[i,:,:] = next
             in (next, next_trs, res)
     in res
--- computes the sum for all patches on an image that has been padded with 7 rows/columns of zeros to the top/left
+-- computes the sum for all patches on an image that has been padded with patchsize-1 rows/columns of zeros to the top/left
 let patch_sum [n] [m]
             (img: [n][m]i64)
+            (patch_size: i64)
             : [n][m]i64 =
-    let patch_size = 8
     -- tabulate_2d instead ?
-    in map (\x -> 
+    map (\x -> 
         map (\y ->
-            let x' = if x < patch_size then 0 else x-7
-            let y' = if y < patch_size then 0 else y-7
+            let x' = if x < patch_size then 0 else x-patch_size+1
+            let y' = if y < patch_size then 0 else y-patch_size+1
             in reduce (+) 0 (map(reduce (+) 0) (img[x':x+1,y':y+1]))      
         ) (iota m)
     ) (iota n)
 
--- size is actually [23][n-7*m-7], but functions aren't a valid size types. 
+-- size is actually [23][(n-patchsize+1)*(m-patchsize+1)], but functions aren't a valid size types. 
 let wh_project [n] [m]
              (img: [n][m][3]i64)
              (p_cons: p_constant [] [] [])
@@ -82,9 +82,9 @@ let wh_project [n] [m]
     -- for each channel compute their simple wh projection. Can't be done efficiently
     let main_size = (length p_cons.transpositions_Y) +1
     let sary_size = (length p_cons.transpositions_C) +1
-    let prjs[0,:,:] = patch_sum img[:,:,0]
-    let prjs[main_size,:,:] = patch_sum img[:,:,1]
-    let prjs[main_size+sary_size,:,:] = patch_sum img[:,:,2]
+    let prjs[0,:,:] = patch_sum img[:,:,0] p_cons.patch_size
+    let prjs[main_size,:,:] = patch_sum img[:,:,1] p_cons.patch_size
+    let prjs[main_size+sary_size,:,:] = patch_sum img[:,:,2] p_cons.patch_size
     -- set hardcoded values corresponding to the gray code steps taken
     let need_transpose = p_cons.transpositions_Y
     let strides        = p_cons.strides_Y

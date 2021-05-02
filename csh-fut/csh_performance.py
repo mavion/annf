@@ -10,7 +10,7 @@ debug=1
 stepsize_k = 2
 stepsize_iterations = 2
 max_k = 2
-max_iterations = 2
+max_iterations = 6
 max_pairs = 1
 
 directory_path = sys.argv[1]

@@ -1,4 +1,4 @@
-import "helper-functions"
+import "helper_functions"
 import "csh_patchsize"
 
 -- The recurrence kernel_x[i] = kernel_y[i] o kernel_y[i-stride] o kernel_x[i-stride] is solved here

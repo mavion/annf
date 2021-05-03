@@ -7,9 +7,8 @@ import csh_main
 
 debug=1
 #limit = 5
-stepsize_k = 2
+k_list = [1,8]
 stepsize_iterations = 2
-max_k = 2
 max_iterations = 6
 max_pairs = 1
 
@@ -31,7 +30,7 @@ def run_pair(path1, path2):
     # img_b = img_b.astype(int)
     time2 = time.perf_counter()
     result_file.write("{},{},{}\n".format(path1, path2, time2-time1))
-    for j in range(1,max_k, stepsize_k):
+    for j in k_list:
         for i in range(1,max_iterations, stepsize_iterations):
             if debug: print("Iterations {}, Knn {}".format(i,j))
             time1 = time.perf_counter()

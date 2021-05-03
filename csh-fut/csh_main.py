@@ -51,7 +51,7 @@ def find_best_n(matches, orig_img, trg_img, patch_size=patch_size_standard):
 # Takes knn as int, this is how many nearest neighbours are found.
 # Returns knn for each patch.
 def csh_knn(orig_img, trg_img, iters, knn, patch_size=patch_size_standard):
-    knn_patches = c.main(orig_img, trg_img, iters, knn).get()
+    knn_patches = c.main(orig_img, trg_img, iters, knn, patch_size).get()
     return knn_patches
 
 def main(orig_img_path, trg_img_path, iters=5, knn=3, patch_size=patch_size_standard):

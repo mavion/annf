@@ -7,5 +7,10 @@ benchmark: l2_data.in csh_test.fut
 	futhark bench --backend=opencl csh_test.fut
 l2_data.in:
 	futhark dataset -b -g [1517009][23]i64 -g [1517009][23]i64 --i64-bounds=0:1517008 -g [1517009][16]i64 > l2_data.in
+setup_pkg:
+	futhark pkg add github.com/diku-dk/sobol
+	futhark pkg add github.com/diku-dk/sorts
+	futhark pkg add github.com/diku-dk/cpprandom
+	futhark pkg sync
 clean:
 	rm *.in

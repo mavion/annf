@@ -3,6 +3,12 @@ import "hashing"
 import "propagate"
 import "csh_patchsize"
 
+-- Benchmarking computing distances for all candidates. 
+-- Used to check for coalesced access
+-- ==
+-- entry: main
+-- compiled input @ test_1920_800_5i_8k_8p.in
+
 -- Given two images in Y/Cr/Cb format return the annf. Hardcoded to 8x8 patch size for now
 let cshANN [n] [m] [k] [j]
            (img_src : [n][m][3]u8) 

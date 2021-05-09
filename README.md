@@ -1,9 +1,10 @@
 # annf
 Instructions to reproduce autotune error:
+
 navigate to /csh-fut
 > make setup_pkg
 
-> make auto_bug.in
+> make auto_bug1.in
 
 > futhark autotune --backend=opencl autotune_bug.fut
 
@@ -22,4 +23,14 @@ Alternatively it can be run with
 and
 > futhark bench --backend=opencl --pass-option=--tuning=autotune_bug.fut.tuning autotune_bug.fut
 
-respectively
+respectively.
+
+A tuning file can be produced on a smaller dataset, which when used on the larger(and more typical) dataset performs better.
+
+> make auto_bug2.in
+
+> futhark autotune --backend=opencl autotune_bug.fut
+
+> make auto_bug1.in
+
+> futhark bench --backend=opencl --pass-option=--tuning=autotune_bug.fut.tuning autotune_bug.fut

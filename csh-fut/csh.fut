@@ -70,13 +70,16 @@ let cshANN [n] [m] [k] [j]
 entry pick_best_nn [n] [m] [k] [j] [knn] [r] [s]
                 (img_src: [n][m][3]u8)
                 (img_trg: [k][j][3]u8)
-                (matches: [r][s][knn][2]i64)
-                : [r][s][2]i64 =
-    let patch_size = 8*8*3
+                (matches: [r][s][knn][2]i32)
+                (patch_s: i64)
+                : [r][s][2]i32 =
+    let patch_size = patch_s*patch_s*3
     in map2 (\x match_row ->  
         map2 (\y match_point ->
-            let src_patch = map (f32.u8) (flatten_3d img_src[x:x+8,y:y+8,:]) :> [patch_size]f32
-            let dists = map (\xy -> dist2 src_patch (map (f32.u8) (flatten_3d img_trg[xy[0]:xy[0]+8,xy[1]:xy[1]+8,:]) :> [patch_size]f32)) match_point
+            let src_patch = map (f32.u8) (flatten_3d img_src[x:x+patch_s,y:y+patch_s,:]) :> [patch_size]f32
+            let dists = map (\xy -> 
+                dist2 src_patch 
+                    (map (f32.u8) (flatten_3d img_trg[i64.i32 (xy[0]): (i64.i32 xy[0])+patch_s,(i64.i32 xy[1]):(i64.i32 xy[1])+patch_s,:]) :> [patch_size]f32)) match_point
             let (_, best) = reduce (\(x0, x1) (y0, y1) -> if x0 < y0 then (x0,x1) else (y0,y1)) (f32.highest, [0,0]) (zip dists match_point)
             in best
         ) (iota s) match_row
@@ -89,11 +92,12 @@ entry RMS_error [n] [m] [k] [j] [r] [s]
                 (img_src: [n][m][3]u8)
                 (img_trg: [k][j][3]u8)
                 (matches: [r][s][2]i32)
+                (patch_s: i64)
                 : f32 =
     let dist2_conv xs ys = dist2 (map (f32.u8) xs) (map (f32.u8) ys) 
     let l2s =
-        loop l2s = replicate r (replicate s 0f32) for x < 8 do
-            loop l2s = l2s for y < 8 do
+        loop l2s = replicate r (replicate s 0f32) for x < patch_s do
+            loop l2s = l2s for y < patch_s do
                 let src_pixels = img_src[x:x+r,y:y+s,:] :> [r][s][3]u8
                 let trg_pixels = map (map (\nn -> img_trg[(i64.i32 nn[0])+x, (i64.i32 nn[1])+y,:])) matches
                 let l2s' = map3 (map3 (\l2 srcp trgp -> l2 + (dist2_conv srcp trgp))) l2s src_pixels trg_pixels

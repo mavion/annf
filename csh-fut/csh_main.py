@@ -16,7 +16,7 @@ def convert_image(img):
 # takes patch_size as int
 # returns error as the average l2 distance
 def mean_error(matches, orig_img, trg_img, patch_size=patch_size_standard):
-    err = c.RMS_error(orig_img, trg_img, matches)
+    err = c.RMS_error(orig_img, trg_img, matches, patch_size)
     return err
 
     # errs = np.zeros_like(matches[:,:,0])
@@ -33,7 +33,7 @@ def mean_error(matches, orig_img, trg_img, patch_size=patch_size_standard):
 # returns matches as (x,y,2)
 # Computes the actual distances and per patch returns the match with lowest distance.
 def find_best_n(matches, orig_img, trg_img, patch_size=patch_size_standard):
-    patches = c.pick_best_nn(orig_img, trg_img, matches).get()
+    patches = c.pick_best_nn(orig_img, trg_img, matches, patch_size).get()
     return patches
     #Trash implementation of picking the best. Took ~20x as long as finding the patches. Moved to Futhark for a ~400x speedup
     # dist = np.zeros_like(matches[:,:,:,0])

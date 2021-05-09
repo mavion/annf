@@ -35,4 +35,4 @@ A tuning file can be produced on a smaller dataset, which when used on the large
 
 > futhark bench --backend=opencl --pass-option=--tuning=autotune_bug.fut.tuning autotune_bug.fut
 
-Notably the dimensions of the candidate set for auto_bug.in are around [1500000][114] or around 170million entries.
+Notably the dimensions of the candidate set for auto_bug1.in are around [1500000][114] or around 170million entries.

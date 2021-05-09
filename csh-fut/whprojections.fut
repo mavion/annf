@@ -4,10 +4,10 @@ import "csh_patchsize"
 -- The recurrence kernel_x[i] = kernel_y[i] o kernel_y[i-stride] o kernel_x[i-stride] is solved here
 -- o is plus or minus depending on how prior and current kernel is related
 -- Allows for efficient computation of all gray code kernels(except for the first)
-let gray_code_step [n] [m] (prior: [n] [m]i64)
+let gray_code_step [n] [m] (prior: [n][m]i32)
                             (stride: i64)
-                            (sign: i64)
-                            : [n] [m]i64 =
+                            (sign: i32)
+                            : [n] [m]i32 =
     -- It's solved using scan using linear func comp
     let stride' = stride - 1
     -- map all known/static values
@@ -39,11 +39,11 @@ let gray_code_step [n] [m] (prior: [n] [m]i64)
             in left) (iota m)) (iota n)
 
 let gray_code_steps [n] [m] [o]
-                    (init_prj: [n][m]i64)
+                    (init_prj: [n][m]i32)
                     (need_transpose: [o]bool)
                     (strides: [o]i64)
-                    (signs: [o]i64)
-                    : [o][n][m]i64 = 
+                    (signs: [o]i32)
+                    : [o][n][m]i32 = 
     let (_, _, res) = 
         loop (prior, prior_trs, res) = (init_prj, transpose init_prj, replicate o (replicate n (replicate m 0))) for i < o do
             let next_trs = if need_transpose[i]
@@ -57,9 +57,9 @@ let gray_code_steps [n] [m] [o]
     in res
 -- computes the sum for all patches on an image that has been padded with patchsize-1 rows/columns of zeros to the top/left
 let patch_sum [n] [m]
-            (img: [n][m]i64)
+            (img: [n][m]i32)
             (patch_size: i64)
-            : [n][m]i64 =
+            : [n][m]i32 =
     -- tabulate_2d instead ?
     map (\x -> 
         map (\y ->
@@ -71,10 +71,10 @@ let patch_sum [n] [m]
 
 -- size is actually [23][(n-patchsize+1)*(m-patchsize+1)], but functions aren't a valid size types. 
 let wh_project [n] [m]
-             (img: [n][m][3]i64)
+             (img: [n][m][3]i32)
              (p_cons: p_constant [] [] [])
              (k_c: i64)
-             : [k_c][]i64 =
+             : [k_c][]i32 =
     -- create the first gray code projection, which is just a 8x8 convolution of ones.
     -- padding with zeros is used to handle initialization of steps
 
@@ -104,5 +104,5 @@ let wh_project_8bit [n] [m]
              (img: [n][m][3]u8)
              (p_c: p_constant [] [] [])
              (k_c: i64) 
-             : [k_c][]i64 =
-    wh_project (map (map (map (i64.u8))) img) p_c k_c
+             : [k_c][]i32 =
+    wh_project (map (map (map (i32.u8))) img) p_c k_c

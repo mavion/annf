@@ -3,11 +3,11 @@
 type p_constant [y] [c] [h] = { kernel_count: i64,
                      transpositions_Y: [y]bool,
                      strides_Y: [y]i64,
-                     signs_Y: [y]i64,
+                     signs_Y: [y]i32,
                      transpositions_C: [c]bool,
                      strides_C: [c]i64,
-                     signs_C: [c]i64,
-                     bit_counts: [h]i64,
+                     signs_C: [c]i32,
+                     bit_counts: [h]i32,
                      kernels_used: [h]i64,
                      patch_size: i64
 }

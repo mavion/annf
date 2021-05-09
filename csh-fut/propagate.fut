@@ -4,9 +4,9 @@ import "helper_functions"
 
 
 module rng_engine = minstd_rand
-module rand_i64 = uniform_int_distribution i64 rng_engine
+module rand_i32 = uniform_int_distribution i32 rng_engine
 
-let dist2 [k] (xs: [k]i64) (ys: [k]i64) : i64 =
+let dist2  [k] (xs: [k]f32) (ys: [k]f32) : f32 =
     reduce (+) 0 (map2 (\x y -> (x-y)*(x-y)) xs ys)
 
 
@@ -16,61 +16,61 @@ let dist2 [k] (xs: [k]i64) (ys: [k]i64) : i64 =
 -- Tests show that this is faster than the current implementation for datasets of the expected size, however switching it in worsens performance by a significant amount.
 -- presumably the nested way is easier for the compiler to fuse.
 let dist2_all [n] [m] [v] [c]
-    (src_vals: [n][v]i64)
-    (trg_vals: [m][v]i64)
-    (candidates: [n][c]i64) : [n][c]i64 =
+    (src_vals: [n][v]f32)
+    (trg_vals: [m][v]f32)
+    (candidates: [n][c]i32) : [n][c]f32 =
     -- outer map is flattened
     let src_points = map (/c) (iota (n*c)) -- lazy replicated iota
     let cands_f = flatten_to (n*c) candidates
-    let dists = map2 (\x y -> dist2 src_vals[x,:] trg_vals[y,:]) src_points cands_f
+    let dists = map2 (\x y -> dist2 src_vals[x,:] trg_vals[i64.i32 y,:]) src_points cands_f
     in unflatten n c dists
 
 
 let init_matches [k] [n] [m]
-                 (wh_src: [k][n]i64) 
-                 (wh_trg: [k][m]i64)
+                 (wh_src: [k][n]i32) 
+                 (wh_trg: [k][m]i32)
                  (knn: i64)
-                 : ([n][knn]i64, [n][knn]i64) =
+                 : ([n][knn]i32, [n][knn]f32) =
     let rng = rng_engine.rng_from_seed [42]
     let rngs = rng_engine.split_rng (n*knn) rng
-    let (_,rands) = unzip (map (rand_i64.rand (0, m-1)) rngs)
+    let (_,rands) = unzip (map (rand_i32.rand (0, (i32.i64 m)-1)) rngs)
     let matches = unflatten n knn rands
-    let matchl2 = map2 (\x ys -> map (\y -> dist2 wh_src[:,x] wh_trg[:,y]) ys) (iota n) matches
+    let matchl2 = map2 (\x ys -> map (\y -> dist2 (map (f32.i32) wh_src[:,x]) (map (f32.i32) wh_trg[:, i64.i32 y])) ys) (iota n) matches
     in unzip (map2 (\xs ys -> unzip (insertion_sort_by_key (\(_,y) -> y) (<=) (zip xs ys))) matches matchl2)
 
 let find_candidates_all [n] [m] [o] [k] [knn] 
-                    (matches: [n][knn]i64)
-                    (hash_src: [n]i64)
-                    (hash_trg: [m]i64)
-                    (hash_table_src: [o][k]i64)
-                    (hash_table_trg: [o][k]i64)
+                    (matches: [n][knn]i32)
+                    (hash_src: [n]i32)
+                    (hash_trg: [m]i32)
+                    (hash_table_src: [o][k]i32)
+                    (hash_table_trg: [o][k]i32)
                     (y_size_src: i64)
                     (y_size_trg: i64)
-                    : [n][]i64 =
+                    : [n][]i32 =
     let cand_count = k+4*knn + 4*knn*k +k*knn
     let find_candidates i = -- type 1. check hash_src on table_trg
-        let type1 = hash_table_trg[hash_src[i],:]
+        let type1 = hash_table_trg[i64.i32 hash_src[i],:]
         -- type 2. check neighbours->match->neighbour->hash_trg on table_trg
         let neighbours = map (\step -> if i + step < 0 || i + step >= n then 0 else i + step) [1, (-1), y_size_src, (-y_size_src)]
         let match_ngbr = map (\j -> matches[j,:]) neighbours
         -- neighbours matches' neighbour are candidates
         let type2ngbr = flatten (map2 (\js step -> map (\j ->
-                                    if j + step < 0 || j + step >= m then 0 else j + step) js
-                                ) match_ngbr [(-1), 1, (-y_size_trg), y_size_trg])
+                                    if j + step < 0 || j + step >= (i32.i64 m) then 0 else j + step) js
+                                ) match_ngbr [(-1i32), 1i32, i32.i64 (-y_size_trg), i32.i64 y_size_trg])
         -- these candidates hash lookups are also candidates
-        let type2hash = flatten (map (\j -> hash_table_trg[hash_trg[j],:]) type2ngbr) 
+        let type2hash = flatten (map (\j -> hash_table_trg[i64.i32 hash_trg[i64.i32 j],:]) type2ngbr) 
         -- type 3. check hash_src on table_src->matches
-        let type3 = flatten (map (\j -> matches[j,:]) hash_table_src[hash_src[i],:])
-        in type1 ++ type2ngbr ++ type2hash ++ type3 :> [cand_count]i64
+        let type3 = flatten (map (\j -> matches[j,:]) hash_table_src[i64.i32 hash_src[i],:])
+        in type1 ++ type2ngbr ++ type2hash ++ type3 :> [cand_count]i32
     in map (find_candidates) (iota n)
 
 
 let bruteForce [knn] [n]
-            (matches: [knn]i64)
-            (match_dist: [knn]i64)
-            (candidates: [n]i64)
-            (candidate_dist: [n]i64)
-            : ([knn]i64, [knn]i64) =
+            (matches: [knn]i32)
+            (match_dist: [knn]f32)
+            (candidates: [n]i32)
+            (candidate_dist: [n]f32)
+            : ([knn]i32, [knn]f32) =
     loop (m_inds, m_d) = (copy matches, copy match_dist) for i < n do
         if candidate_dist[i] >= m_d[knn-1] then (m_inds, m_d)
         else 
@@ -87,13 +87,13 @@ let bruteForce [knn] [n]
                          in (m_inds, m_d, cur_ind', cur_dist')
             in (inds', il2s')
 
-let sortPartSortedSeqs [k] (knn: [k](i64,i64)) : [k](i64,i64) =
+let sortPartSortedSeqs [k] (knn: [k](i32,f32)) : [k](i32,f32) =
   -- now knn contains the neighbors in two partially ordered sequences:
   -- one starting at beginning and one starting at the end
   -- we need to sort them
   -- let knn = intrinsics.opaque (copy knn0)
     let (res, _, _) =
-        loop (knn_sort, beg, end) = (replicate k (-1i64, i64.highest), 0, k-1)
+        loop (knn_sort, beg, end) = (replicate k (-1i32, f32.highest), 0, k-1)
         for i < k do
             let (next_el, beg', end') =
                 if knn[beg].1 < knn[end].1
@@ -104,11 +104,11 @@ let sortPartSortedSeqs [k] (knn: [k](i64,i64)) : [k](i64,i64) =
     in  res
 
 let bruteForcePar [k] [n]
-            (matches: [k]i64)
-            (match_dist: [k]i64)
-            (candidates: [n]i64)
-            (candidate_dist: [n]i64)
-            : ([k]i64, [k]i64) =
+            (matches: [k]i32)
+            (match_dist: [k]f32)
+            (candidates: [n]i32)
+            (candidate_dist: [n]f32)
+            : ([k]i32, [k]f32) =
     let knn = copy (zip matches match_dist)
     let dists = copy candidate_dist
     let cycle = true
@@ -121,10 +121,10 @@ let bruteForcePar [k] [n]
                                 if v1 < v2 then (i1, v1) else
                                 if v1 > v2 then (i2, v2) else
                                 (if i1 <= i2 then i1 else i2, v1)
-                                ) (n, i64.highest) (zip (iota n) dists)
+                                ) (n, f32.highest) (zip (iota n) dists)
         
             in  if min_val < (knn[k-1-j].1)
-                then  let dists[min_ind] = i64.highest
+                then  let dists[min_ind] = f32.highest
                     let knn[k-1-j] = (candidates[min_ind], min_val)
                     in  (dists, knn, j+1, true)
                 else  (dists, knn, j, false)

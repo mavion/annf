@@ -7,10 +7,10 @@ import csh_main
 
 debug=1
 #limit = 5
-k_list = [1,8]
-stepsize_iterations = 2
-max_iterations = 6
-max_pairs = 1
+k_list = [1,4,8]
+stepsize_iterations = 1
+max_iterations = 15
+max_pairs = 133
 
 directory_path = sys.argv[1]
 entries = sorted(os.listdir(directory_path))
@@ -39,7 +39,7 @@ def run_pair(path1, path2):
             best_matches = csh_main.find_best_n(res, img_a_u8, img_b_u8)
             time3 = time.perf_counter()
             error = csh_main.mean_error(best_matches, img_a_u8, img_b_u8)
-            result_file.write("{},{},{}\n".format(time2-time1, time3-time2, error))
+            result_file.write("{},{},{},{},{}\n".format(i, j, time2-time1, time3-time2, error))
 
 pair_count = 0
 for i,k in zip(entries[0::2],entries[1::2]):

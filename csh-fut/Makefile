@@ -2,7 +2,7 @@ test_csh: test_1920_800_5i_8k_8p.in csh.fut
 	futhark opencl csh.fut
 	cat test_1920_800_5i_8k_8p.in | ./csh -t /dev/stderr -r 5 > /dev/null
 main_bench_data.in:
-	futhark dataset -b --u8-bounds=0:255 -g [1920][800][3]u8 -g [1920][800][3]u8 -g 5i64 -g 8i64 -g 8i64 > test_1920_800_5i_8k_8p.in
+	futhark dataset -b --u8-bounds=0:255 -g [1920][800][3]u8 -g [1920][800][3]u8 -g 10i64 -g 1i64 -g 8i64 > test_1920_800_5i_8k_8p.in
 main_tune_data.in:
 	futhark dataset -b --u8-bounds=0:255 -g [192][800][3]u8 -g [1920][800][3]u8 -g 5i64 -g 8i64 -g 8i64 > test_1920_800_5i_8k_8p.in
 benchmark: l2_data.in csh_test.fut

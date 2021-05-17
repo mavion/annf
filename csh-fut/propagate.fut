@@ -47,12 +47,13 @@ let find_candidates_all [n] [m] [o] [k] [knn]
                     (y_size_src: i64)
                     (y_size_trg: i64)
                     : [n][]i32 =
-    let cand_count = k+4*knn + 4*knn*k +k*knn
+    let knn_h = if knn > 1 then knn/2 else knn
+    let cand_count = k+4*knn_h + 4*knn_h*k +k*knn_h
     let find_candidates i = -- type 1. check hash_src on table_trg
         let type1 = hash_table_trg[i64.i32 hash_src[i],:]
         -- type 2. check neighbours->match->neighbour->hash_trg on table_trg
         let neighbours = map (\step -> if i + step < 0 || i + step >= n then 0 else i + step) [1, (-1), y_size_src, (-y_size_src)]
-        let match_ngbr = map (\j -> matches[j,:]) neighbours
+        let match_ngbr = map (\j -> matches[j,0:knn_h]) neighbours
         -- neighbours matches' neighbour are candidates
         let type2ngbr = flatten (map2 (\js step -> map (\j ->
                                     if j + step < 0 || j + step >= (i32.i64 m) then 0 else j + step) js
@@ -60,7 +61,7 @@ let find_candidates_all [n] [m] [o] [k] [knn]
         -- these candidates hash lookups are also candidates
         let type2hash = flatten (map (\j -> hash_table_trg[i64.i32 hash_trg[i64.i32 j],:]) type2ngbr) 
         -- type 3. check hash_src on table_src->matches
-        let type3 = flatten (map (\j -> matches[j,:]) hash_table_src[i64.i32 hash_src[i],:])
+        let type3 = flatten (map (\j -> matches[j,0:knn_h]) hash_table_src[i64.i32 hash_src[i],:])
         in type1 ++ type2ngbr ++ type2hash ++ type3 :> [cand_count]i32
     in map (find_candidates) (iota n)
 

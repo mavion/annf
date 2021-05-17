@@ -7,11 +7,11 @@ import csh_main
 
 debug=1
 #limit = 5
-k_list = [1,4,8]
+k_list = [4,8]
 stepsize_iterations = 1
 max_iterations = 7
 max_pairs = 133
-ps = 16
+ps = 8
 
 directory_path = sys.argv[1]
 entries = sorted(os.listdir(directory_path))

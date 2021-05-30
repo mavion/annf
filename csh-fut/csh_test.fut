@@ -4,24 +4,20 @@ import "helper_functions"
 -- Benchmarking computing distances for all candidates. 
 -- Used to check for coalesced access
 -- ==
--- entry: dist2_prop dist2_part_flat
+-- entry: dist2_prop
 -- compiled input @ l2_data.in
 
 entry dist2_prop [patch_count] [m] [k] [l]
-    (wh_src_trs: [patch_count][k]i64)
-    (wh_trg_trs: [m][k]i64)
-    (candidates: [patch_count][l]i64) =
+    (wh_src_trs: [patch_count][k]f32)
+    (wh_trg_trs: [m][k]f32)
+    (candidates: [patch_count][l]i32) =
     map2 (\x ys -> map (\y -> dist2 wh_src_trs[x,:] wh_trg_trs[y,:]) ys) (iota patch_count) candidates
 
-entry dist2_part_flat [patch_count] [m] [k] [l]
-    (wh_src_trs: [patch_count][k]i64)
-    (wh_trg_trs: [m][k]i64)
-    (candidates: [patch_count][l]i64) =
-    dist2_all wh_src_trs wh_trg_trs candidates
-    -- let src_points = map (/l) (iota (patch_count*l))
-    -- let cands_f = flatten_to (patch_count*l) candidates
-    -- let dists = map2 (\x y -> dist2 wh_src_trs[x,:] wh_trg_trs[y,:]) src_points cands_f
-    -- in unflatten patch_count l dists
+-- entry dist2_part_flat [patch_count] [m] [k] [l]
+--     (wh_src_trs: [patch_count][k]i64)
+--     (wh_trg_trs: [m][k]i64)
+--     (candidates: [patch_count][l]i64) =
+--     dist2_all wh_src_trs wh_trg_trs candidates
 
 -- out of memory error
 -- entry dist2_flat [patch_count] [m] [k] [l]

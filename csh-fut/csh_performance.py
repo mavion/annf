@@ -7,10 +7,11 @@ import csh_main
 
 debug=1
 #limit = 5
-k_list = [1,4,8]
-stepsize_iterations = 1
-max_iterations = 7
-max_pairs = 133
+k_list = [8]
+# stepsize_iterations = 1
+# max_iterations = 25
+i_list = [5,8,10,20]
+max_pairs = 25
 ps = 16
 
 directory_path = sys.argv[1]
@@ -32,7 +33,7 @@ def run_pair(path1, path2):
     time2 = time.perf_counter()
     result_file.write("{},{},{}\n".format(path1, path2, time2-time1))
     for j in k_list:
-        for i in range(1,max_iterations, stepsize_iterations):
+        for i in i_list:
             if debug: print("Iterations {}, Knn {}".format(i,j))
             time1 = time.perf_counter()
             res = csh_main.csh_knn(img_a_conv, img_b_conv, i,j, patch_size=ps)

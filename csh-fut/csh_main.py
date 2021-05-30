@@ -19,14 +19,6 @@ def mean_error(matches, orig_img, trg_img, patch_size=patch_size_standard):
     err = c.RMS_error(orig_img, trg_img, matches, patch_size)
     return err
 
-    # errs = np.zeros_like(matches[:,:,0])
-    # x,y,z = orig_img.shape
-    # xs, ys = matches[:,:,0], matches[:,:,1]
-    # for i in np.arange(0,patch_size):
-    #     for j in np.arange(0,patch_size):
-    #         errs+= np.sum((orig_img[i:x+i-patch_size+1, j:y+j-patch_size+1,:]-trg_img[xs+i,ys+j,:])**2,axis=2) 
-    # return np.mean(errs**0.5)
-
 # takes matches as shape of (x,y,k,2)
 # takes original and target image as BGR format
 # takes patch_size as int
@@ -35,15 +27,7 @@ def mean_error(matches, orig_img, trg_img, patch_size=patch_size_standard):
 def find_best_n(matches, orig_img, trg_img, patch_size=patch_size_standard):
     patches = c.pick_best_nn(orig_img, trg_img, matches, patch_size).get()
     return patches
-    #Trash implementation of picking the best. Took ~20x as long as finding the patches. Moved to Futhark for a ~400x speedup
-    # dist = np.zeros_like(matches[:,:,:,0])
-    # x,y,z = orig_img.shape
-    # xs, ys = matches[:,:,:,0], matches[:,:,:,1]
-    # for i in np.arange(0,patch_size):
-    #     for j in np.arange(0,patch_size):
-    #         dist += np.sum((orig_img[i:x+i-patch_size+1, j:y+j-patch_size+1,None,:]-trg_img[xs+i,ys+j,:])**2,axis=3)
-    # best_inds = np.argmin(dist, axis=2)
-    # return np.take_along_axis(matches,best_inds[:,:,None,None], axis=2).squeeze()
+
 
 # takes original and target image as Y Cb Cr format
 # takes patch_size as int, 8 is currently the only option
